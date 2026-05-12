@@ -738,8 +738,8 @@ for (gene in genes) {
       sequence_counts_postfiltered[[gene]],
       join_by(Sample_ID)
     ) %>%
-    mutate(Proportion_Trimmed_Kept = Non_Chimeras / Trimmed_Reads) %>%
-    mutate(Proportion_Gene = Trimmed_Reads / Raw_Reads) %>%
+    mutate(Proportion_Trimmed_Passed = Non_Chimeras / Trimmed_Reads) %>%
+    mutate(Proportion_Raw_Passed = Trimmed_Reads / Raw_Reads) %>%
     select(
       Sample_ID,
       Raw_Reads,

@@ -71,20 +71,20 @@ path_to_primers <- "primers"
 # Find all forward primers in the primer directory
 forward_primer_files <- list.files(
   path_to_primers,
-  pattern = "F\\.fas$",
+  pattern = "\\-F\\.fas$",
   full.names = FALSE
 )
 # Remove the "F.fas" from the file name giving us the primer name
-available_primers <- sub("F\\.fas$", "", forward_primer_files)
+available_primers <- sub("\\-F\\.fas$", "", forward_primer_files)
 available_primers
 
 # Do the same for the primers that have reverse complement files
 rc_forward_primer_files <- list.files(
   path_to_primers,
-  pattern = "F_RC\\.fas$",
+  pattern = "\\-F_RC\\.fas$",
   full.names = FALSE
 )
-RC_primers <- sub("F_RC\\.fas$", "", rc_forward_primer_files)
+RC_primers <- sub("\\-F_RC\\.fas$", "", rc_forward_primer_files)
 RC_primers
 # Find all the read files in the project directory, save their paths, and
 # confirm. BaseSpace saves the reads in sample-specific folders, using

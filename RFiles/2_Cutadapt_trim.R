@@ -111,13 +111,13 @@ if (length(invalid_genes) > 0) {
 RC_found <- FALSE
 for (gene in genes) {
   cat(
-    readLines(file.path(path_to_primers, paste0(gene, "F.fas"))),
+    readLines(file.path(path_to_primers, paste0(gene, "-F.fas"))),
     file = PrimerF,
     sep = "\n",
     append = TRUE
   )
   cat(
-    readLines(file.path(path_to_primers, paste0(gene, "R.fas"))),
+    readLines(file.path(path_to_primers, paste0(gene, "-R.fas"))),
     file = PrimerR,
     sep = "\n",
     append = TRUE
@@ -125,13 +125,13 @@ for (gene in genes) {
 
   if (gene %in% RC_primers) {
     cat(
-      readLines(file.path(path_to_primers, paste0(gene, "F_RC.fas"))),
+      readLines(file.path(path_to_primers, paste0(gene, "-F_RC.fas"))),
       file = PrimerF_RC,
       sep = "\n",
       append = TRUE
     )
     cat(
-      readLines(file.path(path_to_primers, paste0(gene, "R_RC.fas"))),
+      readLines(file.path(path_to_primers, paste0(gene, "-R_RC.fas"))),
       file = PrimerR_RC,
       sep = "\n",
       append = TRUE

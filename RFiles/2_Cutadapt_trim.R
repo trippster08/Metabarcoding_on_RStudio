@@ -20,8 +20,8 @@ load("data/working/1_RStudioPrep.RData")
 reads_to_trim <- list.files("data/raw", pattern = "\\.fastq\\.gz$")
 head(reads_to_trim)
 # Separate files by read direction (R1,R2), and save each
-reads_to_trim_F <- reads_to_trim[str_detect(reads_to_trim, "_R1(?=[_.])")]
-reads_to_trim_R <- reads_to_trim[str_detect(reads_to_trim, "_R2(?=[_.])")]
+reads_to_trim_F <- reads_to_trim[stringr::str_detect(reads_to_trim, "_R1(?=[_.])")]
+reads_to_trim_R <- reads_to_trim[stringr::str_detect(reads_to_trim, "_R2(?=[_.])")]
 
 # Look to ensure that there are the same number of F and R reads
 length(reads_to_trim_F)
@@ -32,7 +32,7 @@ length(reads_to_trim_R)
 sample_names_raw <- sapply(
   strsplit(
     basename(
-      reads_to_trim[str_detect(reads_to_trim, "_R1(?=[_.])")]
+      reads_to_trim[stringr::str_detect(reads_to_trim, "_R1(?=[_.])")]
     ),
     "_S\\d{1,3}_"
   ),
@@ -45,11 +45,11 @@ head(sample_names_raw)
 sequence_counts_raw <- sapply(
   paste(
     path_to_raw_reads,
-    reads_to_trim[str_detect(reads_to_trim, "_R1(?=[_.])")],
+    reads_to_trim[stringr::str_detect(reads_to_trim, "_R1(?=[_.])")],
     sep = "/"
   ),
   function(file) {
-    fastq_data <- readFastq(file)
+    fastq_data <- ShortRead::readFastq(file)
     length(fastq_data)
   }
 )
@@ -185,24 +185,24 @@ if (!RC_found) {
   cat("\nYour reads have potential read-through, so we will attempt to trim primers from 3' read ends before 5'")
   for (i in seq_along(sample_names_raw)) {
     system2(
-    cutadapt_binary,
-    args = c(
-      "-e 0.2 --cores=8 -O 6",
-      "-a", paste0("file:", PrimerR_RC),
-      "-A", paste0("file:", PrimerF_RC),
-      "-o", paste0(
-        "data/raw/fastq/",
-        sample_names_raw[i],
-        "_trimmed_R1.fastq"
-      ), "-p", paste0(
-        "data/raw/fastq/",
-        sample_names_raw[i],
-        "_trimmed_R2.fastq"
-      ),
-      paste0("data/raw/", reads_to_trim_F[i]),
-      paste0("data/raw/", reads_to_trim_R[i])
+      cutadapt_binary,
+      args = c(
+        "-e 0.2 --cores=8 -O 6",
+        "-a", paste0("file:", PrimerR_RC),
+        "-A", paste0("file:", PrimerF_RC),
+        "-o", paste0(
+          "data/raw/fastq/",
+          sample_names_raw[i],
+          "_trimmed_R1.fastq"
+        ), "-p", paste0(
+          "data/raw/fastq/",
+          sample_names_raw[i],
+          "_trimmed_R2.fastq"
+        ),
+        paste0("data/raw/", reads_to_trim_F[i]),
+        paste0("data/raw/", reads_to_trim_R[i])
+      )
     )
-  )
     system2(
       cutadapt_binary,
       args = c(

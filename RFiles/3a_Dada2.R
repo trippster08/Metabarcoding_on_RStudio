@@ -78,7 +78,7 @@ for (gene in genes) {
   sequence_counts_trimmed[[gene]] <- sapply(
     trimmed_reads[[gene]]$F,
     function(file) {
-      fq <- readFastq(file)
+      fq <- ShortRead::readFastq(file)
       length(fq)
     }
   )
@@ -171,11 +171,11 @@ for (gene in genes) {
   for (direction in c("F", "R")) {
     reads <- actual_trimmed_reads[[gene]][[direction]]
     sample_names <- sample_names_trimmed[[gene]]
-    quality_plots <- plotQualityProfile(
+    quality_plots <- ggplot2::plotQualityProfile(
       reads[1:length(sample_names)],
       aggregate = TRUE
     )
-    plot_build <- ggplot_build(quality_plots)
+    plot_build <- ggplot2::ggplot_build(quality_plots)
     max_x <- plot_build$layout$panel_params[[1]]$x.range[2]
     # Make the quality plots easier to interpret by changing the x-axis scale,
     # creating vertical lines every 10 bp to better determine quality scores at
@@ -199,7 +199,7 @@ for (gene in genes) {
       )
 
     # Save the plot as a PDF
-    ggsave(
+    ggplot2::gggsave(
       filename = file.path(
         path_to_results[[gene]],
         paste0(
@@ -312,7 +312,7 @@ for (gene in genes) {
 # very low quality reads. However, increasing maxEE does increase computational
 # time.
 for (gene in genes) {
-  filterAndTrim(
+  dada2::dfilterAndTrim(
     actual_trimmed_reads[[gene]]$F,
     filtered_reads[[gene]]$F,
     actual_trimmed_reads[[gene]]$R,
@@ -385,7 +385,7 @@ for (gene in genes) {
   sequence_counts_filtered[[gene]] <- sapply(
     filtered_reads[[gene]]$F,
     function(file) {
-      fq <- readFastq(file)
+      fq <- ShortRead::readFastq(file)
       length(fq)
     }
   )
@@ -425,7 +425,7 @@ for (gene in genes) {
   cat("\nModelling error rates and creating plots for", gene, "\n")
   errors[[gene]] <- list(F = NULL, R = NULL)
   for (direction in c("F", "R")) {
-    errors[[gene]][[direction]] <- learnErrors(
+    errors[[gene]][[direction]] <- dada2::learnErrors(
       filtered_reads[[gene]][[direction]],
       nbases = 1e+08,
       errorEstimationFunction = loessErrfun,
@@ -458,8 +458,8 @@ for (gene in genes) {
 
   for (direction in c("F", "R")) {
     err <- errors[[gene]][[direction]]
-    error_plots[[gene]][[direction]] <- plotErrors(err, nominalQ = TRUE)
-    ggsave(
+    error_plots[[gene]][[direction]] <- dada2::plotErrors(err, nominalQ = TRUE)
+    ggplot2::ggsave(
       filename = file.path(
         path_to_results[[gene]],
         paste0(
@@ -496,7 +496,7 @@ for (gene in genes) {
   cat("\nDenoising reads for", gene, "\n")
   denoised[[gene]] <- list(F = NULL, R = NULL)
   for (direction in c("F", "R")) {
-    denoised[[gene]][[direction]] <- dada(
+    denoised[[gene]][[direction]] <- dada2::dada(
       filtered_reads[[gene]][[direction]],
       err = errors[[gene]][[direction]],
       errorEstimationFunction = loessErrfun,
@@ -532,7 +532,7 @@ merged_reads <- setNames(vector("list", length(genes)), genes)
 # Loop through each gene, creating gene-specific merged sequences
 for (gene in genes) {
   cat("\nMerging forward and reverse reads for", gene, "\n")
-  merged_reads[[gene]] <- mergePairs(
+  merged_reads[[gene]] <- dada2::mergePairs(
     denoised[[gene]]$F,
     filtered_reads[[gene]]$F,
     denoised[[gene]]$R,
@@ -561,7 +561,7 @@ seqtab <- setNames(vector("list", length(genes)), genes)
 
 # Loop through each gene, making gene-specific sequence-tables
 for (gene in genes) {
-  seqtab[[gene]] <- makeSequenceTable(merged_reads[[gene]])
+  seqtab[[gene]] <- dada2::makeSequenceTable(merged_reads[[gene]])
 
   # This describes the dimensions of the gene-specific table just made
   # First the number of samples
@@ -597,7 +597,7 @@ for (gene in genes) {
     "\n"
   )
   # remove chimeric sequences from seqtab and save in seqtab_nochim
-  seqtab_nochim[[gene]] <- removeBimeraDenovo(
+  seqtab_nochim[[gene]] <- dada2::removeBimeraDenovo(
     seqtab[[gene]],
     method = "consensus",
     multithread = TRUE,
@@ -614,7 +614,7 @@ for (gene in genes) {
   )
 
   # Make a list of the ASVs that are considered chimeras.
-  chimeras_list <- isBimeraDenovoTable(
+  chimeras_list <- dada2::isBimeraDenovoTable(
     seqtab[[gene]],
     multithread = TRUE,
     verbose = TRUE
@@ -622,13 +622,13 @@ for (gene in genes) {
 
   # This makes a new vector containing all the ASV's (unique sequences) returned
   # by dada2.
-  repseq_all <- getSequences(seqtab[[gene]])
+  repseq_all <- dada2::getSequences(seqtab[[gene]])
   # Get a list of just chimera ASVs by filtering all sequences by chimera_list
   repseq_chimera <- repseq_all[chimeras_list]
   # Make and add md5 hash to the repseq_chimera
   repseq_chimera_md5[[gene]] <- c()
   for (i in seq_along(repseq_chimera)) {
-    repseq_chimera_md5[[gene]][i] <- digest(
+    repseq_chimera_md5[[gene]][i] <- digest::digest(
       repseq_chimera[i],
       serialize = FALSE,
       algo = "md5"
@@ -636,7 +636,7 @@ for (gene in genes) {
   }
 
   # Export chimeric sequences as fastas
-  write.fasta(
+  seqinr::write.fasta(
     sequences = as.list(repseq_chimera),
     names = repseq_chimera_md5[[gene]],
     open = "w",
@@ -667,7 +667,7 @@ seq_length_table <- setNames(vector("list", length(genes)), genes)
 # Loop through genes, creating a sequence length table for each
 for (gene in genes) {
   # Count the number of bp for each gene-specific ASV from the sequence-tables
-  seq_length_table[[gene]] <- table(nchar(getSequences(seqtab_nochim[[gene]])))
+  seq_length_table[[gene]] <- table(nchar(dada2::getSequences(seqtab_nochim[[gene]])))
 
   # Export this table as a .tsv
   write.table(
@@ -703,8 +703,8 @@ track_reads <- setNames(vector("list", length(genes)), genes)
 # Make a table for the post-filtered samples, including denoised,
 # merged, and non-chimeric read counts
 for (gene in genes) {
-  getN <- function(x) sum(getUniques(x))
-  sequence_counts_postfiltered[[gene]] <- tibble(
+  getN <- function(x) sum(dada2::getUniques(x))
+  sequence_counts_postfiltered[[gene]] <- tibble::tibble(
     Sample_ID = sample_names_filtered[[gene]],
     Denoised_Reads_F = sapply(denoised[[gene]]$F, getN),
     Denoised_Reads_R = sapply(denoised[[gene]]$R, getN),
@@ -714,33 +714,33 @@ for (gene in genes) {
 
   # Then we are going to add the post-filtered read count data to the three
   # count data objects we already have (raw, trimmed, filtered).
-  track_reads[[gene]] <- tibble(
+  track_reads[[gene]] <- tibble::tibble(
     Sample_ID = names(sequence_counts_raw),
     Raw_Reads = as.numeric(sequence_counts_raw),
   ) %>%
-    left_join(
-      tibble(
+    dplyr::left_join(
+      tibble::tibble(
         sequence_counts_trimmed[[gene]],
         Sample_ID = names(sequence_counts_trimmed[[gene]]),
         Trimmed_Reads = as.numeric(sequence_counts_trimmed[[gene]])
       ),
       join_by(Sample_ID)
     ) %>%
-    left_join(
-      tibble(
+    dplyr::left_join(
+      tibble::tibble(
         sequence_counts_filtered[[gene]],
         Sample_ID = names(sequence_counts_filtered[[gene]]),
         Filtered_Reads = as.numeric(sequence_counts_filtered[[gene]])
       ),
       join_by(Sample_ID)
     ) %>%
-    left_join(
+    dplyr::left_join(
       sequence_counts_postfiltered[[gene]],
       join_by(Sample_ID)
     ) %>%
-    mutate(Proportion_Trimmed_Passed = Non_Chimeras / Trimmed_Reads) %>%
-    mutate(Proportion_Raw_Passed = Trimmed_Reads / Raw_Reads) %>%
-    select(
+    dplyr::mutate(Proportion_Trimmed_Passed = Non_Chimeras / Trimmed_Reads) %>%
+    dplyr::mutate(Proportion_Raw_Passed = Trimmed_Reads / Raw_Reads) %>%
+    dplyr::select(
       Sample_ID,
       Raw_Reads,
       Trimmed_Reads,
@@ -810,11 +810,11 @@ feattab_nochim_md5 <- setNames(vector("list", length(genes)), genes)
 # unique md5 hashes of the representative sequences (ASV's). This results in
 # identical feature names to those assigned in Qiime2.
 for (gene in genes) {
-  repseq_nochim[[gene]] <- getSequences(seqtab_nochim[[gene]])
+  repseq_nochim[[gene]] <- dada2::getSequences(seqtab_nochim[[gene]])
 
   repseq_nochim_md5[[gene]] <- c()
   for (i in seq_along(repseq_nochim[[gene]])) {
-    repseq_nochim_md5[[gene]][i] <- digest(
+    repseq_nochim_md5[[gene]][i] <- digest::digest(
       repseq_nochim[[gene]][i],
       serialize = FALSE,
       algo = "md5"
@@ -848,7 +848,7 @@ for (gene in genes) {
 
   # Create an md5/ASV table, with each row as an ASV and it's representative md5
   # hash.
-  repseq_nochim_md5_asv[[gene]] <- tibble(
+  repseq_nochim_md5_asv[[gene]] <- tibble::tibble(
     md5 = repseq_nochim_md5[[gene]],
     ASV = repseq_nochim[[gene]]
   )
@@ -965,11 +965,11 @@ repseq_tall_md5 <- setNames(vector("list", length(genes)), genes)
 seqtab_nochim_tall_md5 <- setNames(vector("list", length(genes)), genes)
 
 for (gene in genes) {
-  seqtab_nochim_tall[[gene]] <- as_tibble(
+  seqtab_nochim_tall[[gene]] <- tibble::as_tibble(
     seqtab_nochim[[gene]],
     rownames = "sample"
   ) %>%
-    pivot_longer(
+    tidyr::pivot_longer(
       !sample,
       names_to = "ASV",
       values_to = "count"
@@ -986,7 +986,7 @@ for (gene in genes) {
   # hashs here will match hashs above)
   repseq_tall_md5[[gene]] <- c()
   for (i in seq_along(repseq_tall[[gene]])) {
-    repseq_tall_md5[[gene]][i] <- digest(
+    repseq_tall_md5[[gene]][i] <- digest::digest(
       repseq_tall[[gene]][i],
       serialize = FALSE,
       algo = "md5"
@@ -1000,13 +1000,13 @@ for (gene in genes) {
   # and "count", concatenated. This is the heading for each sequence in the
   # fasta file created by Matt Kweskin's script "featuretofasta.py"
   seqtab_nochim_tall_md5[[gene]] <- seqtab_nochim_tall[[gene]] %>%
-    mutate(md5 = repseq_tall_md5[[gene]]) %>%
-    mutate(sample_md5_count = paste(sample, md5, count, sep = "_")) %>%
-    select(sample, md5, count, sample_md5_count, ASV)
+    dplyr::mutate(md5 = repseq_tall_md5[[gene]]) %>%
+    dplyr::mutate(sample_md5_count = paste(sample, md5, count, sep = "_")) %>%
+    dplyr::select(sample, md5, count, sample_md5_count, ASV)
   ### Export feature-to-fasta fas file for each gene ---------------------------
   # Create a fasta-formatted file of each row sequence (i.e. ASV), with a
   # heading of "sample_feature_count".
-  write.fasta(
+  seqinr::write.fasta(
     sequences = as.list(seqtab_nochim_tall_md5[[gene]]$ASV),
     names = seqtab_nochim_tall_md5[[gene]]$sample_md5_count,
     open = "w",

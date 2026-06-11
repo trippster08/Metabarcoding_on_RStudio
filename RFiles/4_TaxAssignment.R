@@ -34,7 +34,7 @@ download.file(reference_url, paste0("ref/", ref_gzip), mode = "wb")
 
 # Specify decompressed file and unzip
 reference_fasta <- sub("\\.gz$", "", paste0("ref/", ref_gzip))
-gunzip(paste0("ref/", ref_gzip), destname = reference_fasta, remove = TRUE)
+R.utils::gunzip(paste0("ref/", ref_gzip), destname = reference_fasta, remove = TRUE)
 
 ## Assign Taxonomy With DADA2 ==================================================
 # We first assign taxonomy using the assignTaxonomy function in DADA2.
@@ -74,7 +74,7 @@ tax_levels <- c(
 # complement of each sequence. outputBootstraps results in a second table with
 # bootstrap support values for each taxonomic assignment. minBoot gives the
 # minimum bootstrap required to assign taxonomy.
-taxonomy <- assignTaxonomy(
+taxonomy <- dada2::assignTaxonomy(
   seqtab_nochim,
   reference_fasta,
   taxLevels = tax_levels,
@@ -107,14 +107,14 @@ table(taxonomy$tax[, "Phylum"])
 # number of rows and row headings (actually, now column 1)). I amend bootstrap
 # column names with "_boot" (e.g. the bootstrap column for genus would be
 # "Genus_boot"). I also add the md5 hash, and rearrange the columns
-taxonomy_rdp <- inner_join(
-  as_tibble(taxonomy$tax, rownames = "ASV"),
-  as_tibble(taxonomy$boot, rownames = "ASV"),
+taxonomy_rdp <- dplyr::inner_join(
+  tibble::as_tibble(taxonomy$tax, rownames = "ASV"),
+  tibble::as_tibble(taxonomy$boot, rownames = "ASV"),
   by = "ASV",
   suffix = c("", "_boot")
 ) %>%
-  mutate(md5 = repseq_nochim_md5_asv$md5) %>%
-  select(
+  dplyr::mutate(md5 = repseq_nochim_md5_asv$md5) %>%
+  dplyr::select(
     md5,
     ASV,
     Phylum,
@@ -191,7 +191,7 @@ Sys.setenv(
 # the name you chose, and will create all the necessary database files in that
 # directory, all using the chosen name also. I use the same directory name and
 # file name, you do not have to.
-makeblastdb(
+rBLAST::rmakeblastdb(
   reference_fasta,
   db_name = "ref/midori_COI/midori_COI",
   dbtype = "nucl"
@@ -201,7 +201,7 @@ makeblastdb(
 # the database for running BLAST via predict. Give
 # the relative path to the database, and include the name you gave the database
 # in the previous step. I.e. db should be the same here as db_name is above
-midori_coi_db <- blast(db = "ref/midori_COI/midori_COI", type = "blastn")
+midori_coi_db <- rBLAST::blast(db = "ref/midori_COI/midori_COI", type = "blastn")
 
 # We need to have our representative sequences (the sequences we are going to
 # blast). We have to reformat our representative-sequence table to be a named
@@ -209,21 +209,21 @@ midori_coi_db <- blast(db = "ref/midori_COI/midori_COI", type = "blastn")
 View(repseq_nochim_md5_asv)
 
 # Make a DNAStringSet object from our representative sequences
-sequences_dna <- DNAStringSet(setNames(
+sequences_dna <- Biostrings::DNAStringSet(setNames(
   repseq_nochim_md5_asv$ASV,
   repseq_nochim_md5_asv$md5
 ))
 # Look at this object
 sequences_dna
 # You can also get this from the fasta file we downloaded earlier.
-sequences_fasta <- readDNAStringSet("data/results/PROJECTNAME_rep-seq_GENE.fas")
+sequences_fasta <- Biostrings::readDNAStringSet("data/results/PROJECTNAME_rep-seq_GENE.fas")
 
 # They make the same thing.
 head(sequences_dna)
 head(sequences_fasta)
 
 # Finally, we blast our representative sequences against the database we created
-tax_blast <- predict(
+tax_blast <- rBLAST::predict(
   midori_coi_db,
   sequences_dna,
   outfmt = "6 qseqid sseqid pident saccver staxids",
@@ -234,7 +234,7 @@ View(tax_blast)
 # Now we split the taxonomy (sseqid in the table) into a column for each
 # taxonomic level
 taxonomy_blast <- tax_blast %>%
-  separate(
+  tidyr::separate(
     sseqid,
     into = tax_levels,
     sep = ";",
@@ -249,7 +249,7 @@ View(taxonomy_blast)
 
 # Create a BLAST database object of the hydra blast mito database, this opens
 # it for blasting later via predict
-blast_mito_db <- blast(db = "/scratch/dbs/blast/v5/mito")
+blast_mito_db <- rBLAST::blast(db = "/scratch/dbs/blast/v5/mito")
 
 # We need to have our representative sequences (the sequences we are going to
 # blast). We have to reformat our representative-sequence table to be a named
@@ -257,7 +257,7 @@ blast_mito_db <- blast(db = "/scratch/dbs/blast/v5/mito")
 View(repseq_nochim_md5_asv)
 
 # Make a DNAStringSet object from our representative sequences
-sequences_dna <- DNAStringSet(setNames(
+sequences_dna <- Biostrings::DNAStringSet(setNames(
   repseq_nochim_md5_asv$ANML$ASV,
   repseq_nochim_md5_asv$ANML$md5
 ))
@@ -270,7 +270,7 @@ sequences_dna
 # staxids = ncbi taxonomic identifior of reference sequence
 fmt <- "qseqid pident saccver staxids"
 # Finally, we blast our representative sequences against the database we created
-tax_blast <- predict(
+tax_blast <- rBLAST::predict(
   blast_mito_db,
   sequences_dna,
   custom_format = fmt,
@@ -290,7 +290,7 @@ View(tax_blast)
 
 # Use taxize to get classifications from taxid (staxids). Outputs a list of
 # taxids, each with a dataframe containing taxid, rank, and name for that rank.
-taxonomy <- classification(tax_blast$taxid, db = "ncbi")
+taxonomy <- taxize::classification(tax_blast$taxid, db = "ncbi")
 
 ### Make Classification Table --------------------------------------------------
 # I want a single table of classifications for each taxid, not a list of
@@ -308,14 +308,14 @@ tax_ranks <- c("kingdom", "phylum", "class", "order", "family", "genus", "specie
 
 # Make a tibble with the number of rows equal to the number of unique taxids,
 # and the number of columns equal to the number of ranks
-taxonomy_table <- as_tibble(
+taxonomy_table <- tibble::as_tibble(
   matrix("", nrow = length(taxid_unique), ncol = length(ranks)),
   .name_repair = "minimal"
 )
 # Name the columns from the ranks vector.
 colnames(taxonomy_table) <- tax_ranks
 # Add a first column to the tibble as the taxids.
-taxonomy_table <- add_column(taxonomy_table, taxid = taxid_unique, .before = 1)
+taxonomy_table <- tibble::add_column(taxonomy_table, taxid = taxid_unique, .before = 1)
 
 # For each item in the taxonomy_unique list, and for each rank in each list
 # item, take the value for that item and rank and save it in the tibble at the
@@ -333,7 +333,7 @@ for (i in seq_along(taxonomy_unique)) {
 
 ### Add Classification to Taxonomy Table ---------------------------------------
 # Left join the taxonomy_table to tax_blast.
-tax_blast_class <- left_join(
+tax_blast_class <- dplyr::left_join(
   tax_blast,
   taxonomy_table,
   by = taxid
@@ -354,7 +354,7 @@ write.table(
 ### Combine DADA2 and BLAST Taxonomy Results -----------------------------------
 # We can also combine the DADA2 and BLAST taxonomic assignment results into a
 # single table to get a direct comparison of the two methods.
-taxonomy_rdp_blast <- left_join(
+taxonomy_rdp_blast <- dplyr::left_join(
   taxonomy_rdp,
   tax_blast_class,
   by = ASV

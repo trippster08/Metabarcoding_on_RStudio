@@ -9,11 +9,10 @@
 # Load all R packages you may need, if necessary
 
 library(dada2)
-library(digest)
-library(tidyverse)
-library(seqinr)
 library(data.table)
-
+library(seqinr)
+library(tibble)
+library(tidyr)
 
 # Set up your working directory. If you created your new project in the
 # directory you want as your working directory (or came directory from the
@@ -73,7 +72,7 @@ feattab_md5_project_run2 <- read.delim(
 # this case, repseq.project1.run2) into a table with two columns, ASV and
 # feature (the md5 hash of the ASV, converted from the vector names in
 # repseq.project1.run2)
-repseq_project_run2 <- getSequences(
+repseq_project_run2 <- dada2::getSequences(
   "PROJECTNAME_run2_rep-seqs-dada2.fasta"
 ) %>%
   enframe(name = "feature", value = "ASV")
@@ -135,11 +134,11 @@ View(seqtab_project1_run2)
 BiocManager::install("biomformat")
 library(biomformat)
 
-feattab_md5_project1_run2_biom <- read_biom(
+feattab_md5_project1_run2_biom <- biomformat::read_biom(
   "project1_run2_table-dada2.biom"
 )
 feattab_md5_project1_run2 <- as(
-  biom_data(feattab_md5_project1_run2_biom),
+  biomformat::biom_data(feattab_md5_project1_run2_biom),
   "matrix"
 )
 
@@ -148,7 +147,7 @@ feattab_md5_project1_run2 <- as(
 # matrix with row names and column headings, so we need to convert row names
 # to a column.
 # Convert row names to the first column
-feattab_md5_project1_run2 <- as_tibble(
+feattab_md5_project1_run2 <- tibble::as_tibble(
   feattab_md5_project1_run2,
   rownames = "Feature2"
 )
@@ -158,10 +157,10 @@ feattab_md5_project1_run2 <- as_tibble(
 # this case, repseq.project1.run2) into a table with two columns, ASV and
 # Feature (the md5 hash of the ASV, converted from the vector names in
 # repseq.project1.run2)
-repseq_project1_run2 <- getSequences(
+repseq_project1_run2 <- dada2::getSequences(
   "project1_run2_rep-seqs-dada2.fasta"
 ) %>%
-  enframe(name = "Feature", value = "ASV")
+  tibble::enframe(name = "Feature", value = "ASV")
 
 # Combine the representative-sequences table with the md5 feature-table.
 feattab_repseq_project1_run2 <- cbind(
@@ -244,7 +243,7 @@ seqlisttab_project1_run1 <- subset(
 # Convert this tall (and tidy) table into a wide table, in form like a
 # feature-table.  This uses a tidyr command, so it also makes this table into a
 # tibble. We will convert to a data.frame later
-feattab_project1_run1_wide <- pivot_wider(
+feattab_project1_run1_wide <- tidyr::pivot_wider(
   seqlisttab_project1_run1,
   names_from = sample,
   values_from = count,
@@ -279,7 +278,7 @@ View(seqtab_project1_run1)
 # as column headings (because these are needed for downstream analyses), this
 # also works if you have replaced ASVs with md5 hashes as column headings.
 
-seqtab_project1 <- mergeSequenceTables(
+seqtab_project1 <- dada2::mergeSequenceTables(
   seqtab_project1_run1,
   seqtab_project1_run2,
   repeats = "sum",

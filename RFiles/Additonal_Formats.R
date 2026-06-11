@@ -10,12 +10,10 @@
 # Load all R packages you may need if necessary.
 library(dada2)
 library(digest)
-library(phyloseq)
-library(tidyverse)
+library(tibble)
+library(tidyr)
+library(digest)
 library(seqinr)
-library(ape)
-library(DECIPHER)
-library(ade4)
 
 ## Create and Export Sequence-List Table =======================================
 # This creates a table containing three columns: sample name, ASV, and read
@@ -37,7 +35,7 @@ library(ade4)
 # versatile data.frame, but it does not have row headings
 # (among other differences, see https://tibble.tidyverse.org/). We'll need
 # this to be a tibble for the next step.
-seqtab_nochim_tb <- as_tibble(seqtab_nochim, rownames = "sample")
+seqtab_nochim_tb <- tibble::as_tibble(seqtab_nochim, rownames = "sample")
 
 # The sequence-table has a column with sample names, and N columns of ASV's
 # containing count values. We want all the count data to be in a single column,
@@ -47,7 +45,7 @@ seqtab_nochim_tb <- as_tibble(seqtab_nochim, rownames = "sample")
 # original table contains sample names, not counts). This makes the table tidier
 # (meaning that each column is now a true variable).
 seqtab_nochim_tall <- seqtab_nochim_tb %>%
-  pivot_longer(
+  tidyr::pivot_longer(
     !sample,
     names_to = "ASV",
     values_to = "count"
@@ -93,7 +91,7 @@ head(repseq_tall)
 # hashs here will match hashs above)
 repseq_tall_md5 <- c()
 for (i in seq_along(repseq_tall)) {
-  repseq_tall_md5[i] <- digest(
+  repseq_tall_md5[i] <- digest::digest(
     repseq_tall[i],
     serialize = FALSE,
     algo = "md5"
@@ -115,7 +113,7 @@ colnames(seqtab_nochim_tall_nozero_md5)
 # Create a new column in this table that contains "sample", "feature", and
 # "count", concatenated. This is the heading for each sequence in the fasta file
 # created by Matt Kweskin's script "featuretofasta.py"
-seqtab_nochim_tall_nozero_md5_name <- unite(
+seqtab_nochim_tall_nozero_md5_name <- tidyr::unite(
   seqtab_nochim_tall_nozero_md5,
   sample_feature_count,
   c(sample, md5, count),
@@ -147,7 +145,7 @@ colnames(seqtab_nochim_tall_nozero_md5_name_reorder)
 
 # Create a fasta-formatted file of each row sequence (i.e. ASV), with a heading
 # of "sample_feature_count".
-write.fasta(
+seqinr::write.fasta(
   sequences = as.list(seqtab_nochim_tall_nozero_md5_name$ASV),
   names = seqtab_nochim_tall_nozero_md5_name$sample_feature_count,
   open = "w",

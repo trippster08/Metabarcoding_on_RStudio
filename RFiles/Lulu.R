@@ -1,29 +1,40 @@
+## File Housekeeping ===========================================================
+# Install lulu if you haven't already. You only need to do this once.
+install_github("tobiasgf/lulu")
+
+# Load all R packages you may need, if necessary
+library(rBLAST)
+library(Biostrings)
+library(lulu)
+library(digest)
+library(dplyr)
+library(tibble)
 ## Make Lulu matchlist =========================================================
 dir.create("ref/repseq_db")
 
-makeblastdb(
+rBLAST::makeblastdb(
   "data/results/PROJECTNAME_rep-seq.fas",
   db_name = "ref/repseq_db/repseq_db",
   dbtype = "nucl"
 )
 
-refseqdb <- blast(db = "ref/rep_seqs/refseqdb")
+rBLAST::blast(db = "ref/rep_seqs/refseqdb")
 
 # Make a DNAStringSet object from our representative sequences
-sequences_dna <- DNAStringSet(setNames(
+sequences_dna <- BioStrings::DNAStringSet(setNames(
   repseq_nochim_md5_asv$ASV,
   repseq_nochim_md5_asv$md5
 ))
 
 # You can also get this from the fasta file we downloaded earlier.
-sequences_fasta <- readDNAStringSet("data/results/PROJECTNAME_rep-seq.fas")
+sequences_fasta <- BioStrings::readDNAStringSet("data/results/PROJECTNAME_rep-seq.fas")
 
 # They make the same thing.
 head(sequences_rep_seq)
 head(sequences_fasta)
 
 
-lulu_blast <- predict(
+lulu_blast <- rBLAST::predict(
   refseqdb,
   sequences.dna,
   outfmt = "6 qseqid sseqid pident",
@@ -31,7 +42,7 @@ lulu_blast <- predict(
 )
 
 lulu_matchlist <- lulu_blast %>%
-  select(qseqid, sseqid, pident)
+  dplyr::select(qseqid, sseqid, pident)
 
 
 ## Run Lulu Analysis ===========================================================
@@ -40,10 +51,10 @@ lulu_matchlist <- lulu_blast %>%
 View(repseq_nochim_md5_asv)
 
 seqtab_nochim_transpose_md5_lulu <- seqtab.nochim.transpose.md5 %>%
-  column_to_rownames(var = "ASV")
+  tibble::column_to_rownames(var = "ASV")
 
 
-curated_asv <- lulu(
+curated_asv <- lulu::lulu(
   seqtab_nochim_transpose_md5_lulu,
   lulu_matchlist,
   minimum_match = 84,
@@ -61,7 +72,7 @@ repseq_lulu <- feattab_lulu$
 
 repseq_lulu_md5 <- c()
 for (i in seq_along(repseq_lulu)) {
-  repseq_lulu_md5[i] <- digest(
+  repseq_lulu_md5[i] <- digest::digest(
     repseq_lulu[i],
     serialize = FALSE,
     algo = "md5"

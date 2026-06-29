@@ -226,7 +226,7 @@ head(sequences_fasta)
 tax_blast <- rBLAST::predict(
   midori_coi_db,
   sequences_dna,
-  outfmt = "6 qseqid sseqid pident saccver staxids",
+  outfmt = "6 qseqid sacc staxids sscinames scomnames qcovs pident",
   BLAST_args = "-perc_identity 85 -max_target_seqs 1 -qcov_hsp_perc 80"
 )
 View(tax_blast)

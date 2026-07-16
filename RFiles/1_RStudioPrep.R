@@ -97,6 +97,9 @@ RC_primers
 raw_reads <- list.files(pattern = "\\.fastq\\.gz", recursive = TRUE)
 head(raw_reads)
 
+# We don't want to include "undetermined" reads in our analysis, so remove them
+raw_reads <- raw_reads[!grepl("Undetermined", basename(raw_reads), ignore.case = TRUE)]
+
 # Copy the read files to the "data/raw" directory, and confirm that they are
 # there. This loop will skip copying any files that already exist in the
 # destination directory.
@@ -108,7 +111,6 @@ for (file in raw_reads) {
   } else {
     message("Skipped (already exists): ", file)
   }
-rm(dest_file)
 }
 head(list.files("data/raw", pattern = "\\.fastq\\.gz"))
 
@@ -124,21 +126,23 @@ gene_num
 # Set a path to the directory containing raw reads.
 path_to_raw_reads <- "data/raw"
 # Set path to working directory
-path_to_working <- "data/working"
+path_to_working <- "data/working"ls
 # Set path to results directory
 base_path_to_results <- "data/results"
 # Set path to the directory (or directories, depending upon the number of genes)
 # of the trimmed sequences. This creates a list of paths, one path for each gene
 path_to_trimmed <- setNames(
-  lapply(genes, function(gene) {
-    dir_path <- file.path(
-      path_to_working,
-      "trimmed_sequences",
-      gene
-    )
-    dir.create(dir_path, recursive = TRUE)
-    dir_path
-  }),
+  lapply(
+    genes, function(gene) {
+      dir_path <- file.path(
+        path_to_working,
+        "trimmed_sequences",
+        gene
+      )
+      dir.create(dir_path, recursive = TRUE)
+      dir_path
+    }
+  ),
   genes
 )
 

@@ -126,7 +126,7 @@ gene_num
 # Set a path to the directory containing raw reads.
 path_to_raw_reads <- "data/raw"
 # Set path to working directory
-path_to_working <- "data/working"ls
+path_to_working <- "data/working"
 # Set path to results directory
 base_path_to_results <- "data/results"
 # Set path to the directory (or directories, depending upon the number of genes)

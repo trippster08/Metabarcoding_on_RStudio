@@ -29,6 +29,10 @@ We are going to use the open-source version of miniconda, called miniforge, to i
 ```
 wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
 ```
+If your computer does not have wget installed, you may also use this command:
+```
+curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
+```
 
 Next we run this script with:
 ```

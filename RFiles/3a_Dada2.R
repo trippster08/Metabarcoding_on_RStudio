@@ -173,7 +173,7 @@ for (gene in genes) {
   for (direction in c("F", "R")) {
     reads <- actual_trimmed_reads[[gene]][[direction]]
     sample_names <- sample_names_trimmed[[gene]]
-    quality_plots <- ggplot2::plotQualityProfile(
+    quality_plots <- dada2::plotQualityProfile(
       reads[1:length(sample_names)],
       aggregate = TRUE
     )
@@ -201,7 +201,7 @@ for (gene in genes) {
       )
 
     # Save the plot as a PDF
-    ggplot2::gggsave(
+    ggplot2::ggsave(
       filename = file.path(
         path_to_results[[gene]],
         paste0(

@@ -7,7 +7,9 @@
 # step.
 library(dada2)
 library(digest)
-library(tidyverse)
+library(stringr)
+library(dplyr)
+library(tibble)
 library(seqinr)
 library(ShortRead)
 

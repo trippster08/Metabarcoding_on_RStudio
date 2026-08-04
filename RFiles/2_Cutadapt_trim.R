@@ -4,7 +4,7 @@
 # Load all R packages you may need, if not coming directly from
 # "1_Metabarcoding_R_Pipeline_ComputerPrep".
 
-library(tidyverse)
+library(stringr)
 library(ShortRead)
 library(R.utils)
 
@@ -59,7 +59,7 @@ names(sequence_counts_raw) <- sample_names_raw
 # Look at the raw read counts
 sequence_counts_raw
 
-# Define the path to your primer definition fasta file, if you have more than
+# Define the path to your primer definition fastq file, if you have more than
 # one potential primer to trim. This path will be different for each user.
 
 # At LAB, we use both Nextera and iTru sequencing primers. Currently, our Truseq

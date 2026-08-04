@@ -17,7 +17,9 @@ library(seqinr)
 library(ape)
 library(DECIPHER)
 library(ade4)
-
+library(Biostrings)
+library(bioseq)
+library(phangorn)
 # Set up your working directory. If you created your new project in the
 # directory you want as your working directory (or came directory from the
 # previous step in the pipeline), you don't need to do this, and
@@ -31,12 +33,12 @@ setwd("/Users/smithb/Dropbox (Smithsonian)/Projects_Metabarcoding/PROJECTNAME")
 # Add md5 hash to the sequence-table from the DADA2 analysis. You may already
 # have this
 seqtab_nochim_md5 <- as.matrix(seqtab_nochim)
-colnames(seqtab_md5) <- repseq_project1_md5
-View(seqtab_md5)
+colnames(seqtab_nochim_md5) <- repseq_project1_md5
+View(seqtab_nochim_md5)
 # Make phyloseq otu_table from the sequence-table (columns of ASV/OTUs, rows of
 # samples). If you want to use a feature-table (columns of samples, rows of
 # ASV/OTUs) instead, use "taxa_are_rows = TRUE"
-OTU_md5 <- otu_table(seqtab_nochim_md5, taxa_are_rows = FALSE) 
+OTU_md5 <- phyloseq::otu_table(seqtab_nochim_md5, taxa_are_rows = FALSE) 
 
 ### tax_table ------------------------------------------------------------------
 # Row headings for the tax_table should match the column headings in the
@@ -47,11 +49,11 @@ OTU_md5 <- otu_table(seqtab_nochim_md5, taxa_are_rows = FALSE)
 # Make a new taxonomy-only table, and replace the current rownames (ASVs) with
 # md5 hashes.
 taxonomy_tax_md5 <- taxonomy$tax
-row.names(taxonomy_tax_md5) = repseq_md5
+row.names(taxonomy_tax_md5) <- repseq_md5
 View(taxonomy_tax_md5)
 
 # Make phyloseq tax-table from our taxonomy-only table.
-TAX_md5 <- tax_table(taxonomy_tax_md5)
+TAX_md5 <- phyloseq::tax_table(taxonomy_tax_md5)
 
 ### sample_data ----------------------------------------------------------------
 # Import metadata (here as a tab-delimited text file, see examples for
@@ -81,7 +83,7 @@ rownames(seqtab_nochim)
 # "colClasses = c()" argument, which defines any column (or multiple columns)
 # as a particular data type. This is important when looking at plots downstream.
 # To check data type for a all columns in your table, use "str(metadata)".
-metadata <- sample_data(read.delim(
+metadata <- phyloseq::sample_data(read.delim(
   "data/working/PROJECTNAME_metadata.tsv", 
   sep = "\t", 
   header = TRUE,
@@ -97,7 +99,7 @@ View(metadata)
 # Look at data type of all the columns of the table.
 str(metadata)
 # Make a phyloseq sample_data file from "metadata"
-SAMPLE <- sample_data(metadata)
+SAMPLE <- phyloseq::sample_data(metadata)
 
 
 ### refseq ---------------------------------------------------------------------
@@ -122,7 +124,7 @@ names(sequences) <- repseq.md5
 
 # Convert these sequences into a DNAString, which is the format of sequences
 # used by DECIPHER, and many other phylogenetic programs in R.
-sequences_dna <- DNAStringSet(sequences)
+sequences_dna <- Biostrings::DNAStringSet(sequences)
 
 # Align using DECIPHER. DECIPHER "Performs profile-to-profile alignment of
 # multiple unaligned sequences following a guide tree" (from the manual). We do
@@ -137,15 +139,9 @@ sequences_dna <- DNAStringSet(sequences)
 # if you have lots of ASVs. Use more refinements and/or interations to get a
 # "better" alignment, but increasing these will take more computing time.
 
-# If you are using RNA, convert sequences.dna to sequences.rna. You cannot
-# convert DADA@DNA sequences into an RNAStringSet (i.e. 
-# "RNAStringSet(sequences)" will give you an error. You must first make a
-# DNAStringSet from "sequences".)
-sequences_rna <- RNAStringSet(sequences_dna)
-
 # Make an alignment from your DNA or RNA data, and change "useStructures" 
 # accordingly.
-alignment_dna <- AlignSeqs(
+alignment_dna <- DECIPHER::AlignSeqs(
   sequences_dna,
   guideTree = NULL,
   anchor = NA,
@@ -162,11 +158,11 @@ alignment_dna <- AlignSeqs(
 alignment_dna
 
 # You can also look at the entire alignment in your browser.
-BrowseSeqs(alignment_dna)
+DECIPHER::BrowseSeqs(alignment_dna)
 
 # Create a reference sequence (refseq) object from the alignment. This contains
 # the ASV sequences, using the md5 hashes as names.
-REFSEQ_md5 <- DNAStringSet(alignment_dna, use.names = TRUE)
+REFSEQ_md5 <- Biostrings::DNAStringSet(alignment_dna, use.names = TRUE)
 # Look at the refseq object, just to make sure it worked
 head(REFSEQ_md5)
 
@@ -176,7 +172,7 @@ head(REFSEQ_md5)
 
 # For ape, the aligned sequences must be in binary format (DNAbin, which reduces
 # the size of large datasets), so we first convert the DNAstring alignment.
-alignment_dnabin <- as_DNAbin(alignment_dna)
+alignment_dnabin <- bioseq::as_DNAbin(alignment_dna)
 
 #Create pairwise distance matrix in ape. There are many different models to use.
 # Here we are using the Tamura Nei 93 distance measure. Turning the resulting
@@ -184,7 +180,7 @@ alignment_dnabin <- as_DNAbin(alignment_dna)
 # pairwise distances. Using "as.matrix = FALSE" results in a
 # distances are meaningless to look at, but either type can be used for
 # tree-building).
-pairwise_tn93 <- dist_dna(
+pairwise_tn93 <- ape::dist.dna(
   alignment_dnabin,
   model = "tn93",
   as.matrix = TRUE
@@ -203,19 +199,16 @@ pairwise_tn93 <- dist_dna(
 # don't know how many NaNs are too many, but if there are more than a few, I
 # would prefer to be safe and use ml distances.
 length(is.nan(pairwise_tn93))
-length(pairwise_tn93)/length(is.nan(pairwise_tn93))
+length(pairwise_tn93) / length(is.nan(pairwise_tn93))
 
-#Install and load the phangorn library
-install# fmt: skippackages("phangorn")
-library(phangorn)
 # Obtain pairwise distances with the "dist.ml" command. It currently only has
 # two models of evolution: JC69 and F81.
 # First, "dist.ml" requires the alignment to be in the phyDat format, which can
 # be converted from the dnabin format (but not the DNAStringSet format) using
 # "as.phyDat".
-alignment.phyDat <- as.phyDat(alignment.dnabin)
+alignment.phyDat <- phangorn::as.phyDat(alignment.dnabin)
 
-pairwise.ml <- dist.ml(
+pairwise.ml <- phangorn::dist.ml(
     alignment.phyDat,
     model = "F81"
 )
@@ -228,7 +221,7 @@ length(is.nan(pairwise.ml))
 # upgm. If there are any NaNs in your data, use "bionjs", otherwise us "bionj".
 # If you used a different distance model (ml, K80, F84, etc) replace "tn93"
 # with the model used.
-tree.tn93.bionj <- bionj(pairwise.tn93)
+tree.tn93.bionj <- ape::bionj(pairwise.tn93)
 
 # Look at the tree. Of course, if there are a lot of ASV's, the tree is pretty
 # much indecipherable, even with lots of editing using ggplot2. We will look at
@@ -236,7 +229,7 @@ tree.tn93.bionj <- bionj(pairwise.tn93)
 plot(tree.tn93.bionj)
 
 # Create a phyloseq tree object from our neihbor-joining tree.
-TREE.md5 <-  phy_tree(tree.tn93.bionj)
+TREE.md5 <-  phyloseq::phy_tree(tree.tn93.bionj)
 
 ### phyloseq object ------------------------------------------------------------
 # We use the components created above to create a phyloseq object. For the
@@ -246,7 +239,7 @@ TREE.md5 <-  phy_tree(tree.tn93.bionj)
 # and make "taxa_are_rows = TRUE", but it didn't work as well for me, so I
 # suggest you stick with the default format.
 
-physeq <- phyloseq(
+physeq <- phyloseq::phyloseq(
   OTU.md5,
   TAX.md5,
   SAMPLE.md5,
@@ -258,21 +251,21 @@ physeq <- phyloseq(
 # There are lots of parameters of the phyloseq object you can look at. Part of
 # the reason for looking at these is to make sure the values are what you
 # expect.
-ntaxa(physeq)
-nsamples(physeq)
-sample_names(physeq)
-sample_variables(physeq)
-otu_table(physeq)[1:5,1:5]
-tax_table(physeq)[1:5,1:5]
-phy_tree(physeq)
-taxa_names(physeq)[1:20]
+phyloseq::ntaxa(physeq)
+phyloseq::nsamples(physeq)
+phyloseq::sample_names(physeq)
+phyloseq::sample_variables(physeq)
+phyloseq::otu_table(physeq)[1:5,1:5]
+phyloseq::tax_table(physeq)[1:5,1:5]
+phyloseq::phy_tree(physeq)
+phyloseq::taxa_names(physeq)[1:20]
 
 # We can also look at the tree in greater detail, including adding labels that
 # show factor variables for each branch. "color", "shape", and "size" are all
 # terminal branch labels that can show variable values.  "base.spacing" and
 # "min.abundance" are for making these labels easier to see when there are a 
 # lot.
-plot_tree(
+phyloseq::plot_tree(
   physeq,
   ladderize = "left",
   color = "filter_size",
@@ -285,7 +278,7 @@ plot_tree(
 
 
 
-plot_richness(physeq, x="filter_size", measures=c("Shannon", "Fisher"), color = "filter_size") 
-ord.euclidean <- ordinate(physeq, "MDS", "euclidean")
-plot_ordination(physeq, ord.euclidean, type = "samples", color = "tank")
-plot_ordination(physeq, ord.euclidean, type = "samples", color = "filter_size")
+phyloseq::plot_richness(physeq, x="filter_size", measures=c("Shannon", "Fisher"), color = "filter_size") 
+ord.euclidean <- phyloseq::ordinate(physeq, "MDS", "euclidean")
+phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "tank")
+phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "filter_size")

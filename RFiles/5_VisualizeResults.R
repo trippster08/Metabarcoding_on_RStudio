@@ -3,6 +3,7 @@ library(patchwork)
 library(ggplot2)
 library(dplyr)
 library(tibble)
+library(scales)
 
 # First, lets look at read counts for each sample
 read_count <- rowSums(seqtab_nochim_md5)

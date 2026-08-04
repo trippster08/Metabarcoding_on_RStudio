@@ -8,7 +8,9 @@
 library(dada2)
 library(digest)
 library(rBLAST)
-library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(tibble)
 library(seqinr)
 library(R.utils)
 

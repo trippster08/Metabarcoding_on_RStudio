@@ -135,7 +135,7 @@ Open RStudio, and open `1_RstudioPrep.R` in the Source Editor (typically the top
 [1 - Metabarcoding RStudioPrep.R](https://github.com/trippster08/Metabarcoding_on_PC_LAB/blob/main/RFiles/1_RStudioPrep.R)
 
 ### Get Raw Reads
-Get raw reads. Whether you get them from Illumina basespace downloader or another way, all reads should already be in a directory. Place that directory in the main project directory. *NOTE: Remove any "undetermined" read files from the folder containing your raw reads. You do not want to include these reads in your analyses.* 
+Get raw reads. Whether you get them from Illumina basespace downloader or another way, all reads should already be in a directory. Place that directory in the main project directory. 
 
 ## Cutadapt
 We use Cutadapt to remove primer sequences from our raw reads. This section ends with primer-trimmed sequences. Cutadapt will also demultiplex by gene. Cutadapt places trimmed reads into a gene-specific folder depending upon what primer is removed. If multiple amplicon regions were included in a single run, this will "demultiplex" by gene, even if the regions share an index. Trimmed reads will be save in a gene-specific directory: data/working/trimmed_sequences/<gene>

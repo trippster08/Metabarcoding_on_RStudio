@@ -72,26 +72,6 @@ new_dir <- c(
 # Create the directories using sapply
 sapply(new_dir, dir.create, recursive = TRUE)
 
-# Make path to regular primer files
-path_to_primers <- "primers"
-# Find all forward primers in the primer directory
-forward_primer_files <- list.files(
-  path_to_primers,
-  pattern = "\\-F\\.fas$",
-  full.names = FALSE
-)
-# Remove the "F.fas" from the file name giving us the primer name
-available_primers <- sub("\\-F\\.fas$", "", forward_primer_files)
-available_primers
-
-# Do the same for the primers that have reverse complement files
-rc_forward_primer_files <- list.files(
-  path_to_primers,
-  pattern = "\\-F_RC\\.fas$",
-  full.names = FALSE
-)
-RC_primers <- sub("\\-F_RC\\.fas$", "", rc_forward_primer_files)
-RC_primers
 # Find all the read files in the project directory, save their paths, and
 # confirm. BaseSpace saves the reads in sample-specific folders, using
 # "recursive = TRUE" allows us to find all read files in the working directory
@@ -115,10 +95,34 @@ for (file in raw_reads) {
 }
 head(list.files("data/raw", pattern = "\\.fastq\\.gz"))
 
+# Make path to regular primer files
+path_to_primers <- "primers"
+# Find all forward primers in the primer directory
+forward_primer_files <- list.files(
+  path_to_primers,
+  pattern = "\\-F\\.fas$",
+  full.names = FALSE
+)
+# Remove the "F.fas" from the file name giving us the primer name
+available_primers <- sub("\\-F\\.fas$", "", forward_primer_files)
+available_primers
+
+# Do the same for the primers that have reverse complement files
+rc_forward_primer_files <- list.files(
+  path_to_primers,
+  pattern = "\\-F_RC\\.fas$",
+  full.names = FALSE
+)
+RC_primers <- sub("\\-F_RC\\.fas$", "", rc_forward_primer_files)
+RC_primers
+
+
 # Make a list of genes that will be analyzed in this pipeline, regardless of
 # whether it's one or many. Make sure the primer sequences for these are in
-# the primer folder and the name is the same as the gene name
-# (see available_primers) for appropriate gene names
+# the primer folder and the name is the same as the gene name.
+# See available_primers list you just printed for appropriate gene names.
+# Replace the example gene names below with your own gene names, add more
+# if necessary, and remove any unneeded ones.
 genes <- c("gene1", "gene2", "gene3")
 # Get number of genes
 gene_num <- length(genes)

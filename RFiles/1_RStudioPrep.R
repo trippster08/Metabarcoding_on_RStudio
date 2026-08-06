@@ -62,7 +62,6 @@ project_name
 # Create all the subdirectories we will use
 # Define the directory names
 new_dir <- c(
-  "data/raw/fastq",
   "data/working/trimmed_sequences",
   "data/results",
   "ref",
@@ -150,7 +149,23 @@ path_to_trimmed <- setNames(
   ),
   genes
 )
-
+# Do the same for demultiplexed sequences. We will trim and demultiples first,
+# then trim 3' primers if necessary, then move demulitiplexed and trimmed
+# sequences into the appropriate gene-specific trimmed_sequences directory.
+path_to_demultiplexed <- setNames(
+  lapply(
+    genes, function(gene) {
+      dir_path <- file.path(
+        path_to_raw_reads,
+        "demultiplexed_sequences",
+        gene
+      )
+      dir.create(dir_path, recursive = TRUE)
+      dir_path
+    }
+  ),
+  genes
+)
 # Set a path to the results directorie(s), as a list of paths, one for each gene
 path_to_results <- setNames(
   lapply(genes, function(gene) {

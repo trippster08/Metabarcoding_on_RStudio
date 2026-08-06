@@ -90,11 +90,25 @@ sequence_counts_raw
 # Create the path to the primer files that will be used by cutadapt.
 PrimerF <- file.path(path_to_primers, "active/PrimerF.fas")
 PrimerR <- file.path(path_to_primers, "active/PrimerR.fas")
-PrimerF_RC <- file.path(path_to_primers, "active/PrimerF_RC.fas")
-PrimerR_RC <- file.path(path_to_primers, "active/PrimerR_RC.fas")
 # Create empty primer files to be used by cutadapt. These will be filled
 # momentarily
-file.create(PrimerF, PrimerR, PrimerF_RC, PrimerR_RC)
+file.create(PrimerF, PrimerR)
+
+gene_PrimerF_RC <- list()
+gene_PrimerR_RC <- list()
+
+for (gene in genes) {
+  gene_PrimerF_RC[[gene]] <- file.path(
+    path_to_primers,
+    "active",
+    paste0(gene, "-F_RC.fas")
+  )
+  gene_PrimerR_RC[[gene]] <- file.path(
+    path_to_primers,
+    "active",
+    paste0(gene, "-R_RC.fas")
+  )
+}
 
 # Validate the gene names you have entered previously have available primers
 invalid_genes <- setdiff(genes, available_primers)
@@ -108,7 +122,6 @@ if (length(invalid_genes) > 0) {
 # read-through, and additionally for F_RC and R_RC primers if a gene is chosen
 # that may have read-through (MiFish, for example).
 
-RC_found <- FALSE
 for (gene in genes) {
   cat(
     readLines(file.path(path_to_primers, paste0(gene, "-F.fas"))),
@@ -124,19 +137,16 @@ for (gene in genes) {
   )
 
   if (gene %in% RC_primers) {
-    cat(
-      readLines(file.path(path_to_primers, paste0(gene, "-F_RC.fas"))),
-      file = PrimerF_RC,
-      sep = "\n",
-      append = TRUE
+    file.copy(
+      from = file.path(path_to_primers, paste0(gene, "-F_RC.fas")),
+      to = gene_PrimerF_RC[[gene]],
+      overwrite = TRUE
     )
-    cat(
-      readLines(file.path(path_to_primers, paste0(gene, "-R_RC.fas"))),
-      file = PrimerR_RC,
-      sep = "\n",
-      append = TRUE
+    file.copy(
+      from = file.path(path_to_primers, paste0(gene, "-R_RC.fas")),
+      to = gene_PrimerR_RC[[gene]],
+      overwrite = TRUE
     )
-    RC_found <- TRUE
   }
 }
 
@@ -156,76 +166,121 @@ cutadapt_binary <- "/home/macdonaldk/.conda/envs/cutadapt/bin/cutadapt"
 # only trim 5' primers, and will discard pairs of reads for which
 
 # fmt: skip
-if (!RC_found) {
-  # Run cutadapt, only removing 5' primers
-  cat("\nYour reads should not have potential read-through, so we are only removing primers from the 5' end of each read")
-  for (i in seq_along(sample_names_raw)) {
-    system2(
-      cutadapt_binary,
-      args = c(
-        "-e 0.2 --discard-untrimmed --minimum-length 30 --cores=8",
-        "-g", paste0("file:", PrimerF),
-        "-G", paste0("file:", PrimerR),
-        "-o", paste0(
-          "data/working/trimmed_sequences/{name}/",
-          sample_names_raw[i],
-          "_trimmed_R1.fastq"
-        ), "-p", paste0(
-          "data/working/trimmed_sequences/{name}/",
-          sample_names_raw[i],
-          "_trimmed_R2.fastq"
-        ),
-        paste0("data/raw/", reads_to_trim_F[i]),
-        paste0("data/raw/", reads_to_trim_R[i])
-      )
+
+# Run cutadapt, only removing 5' primers
+for (i in seq_along(sample_names_raw)) {
+  system2(
+    cutadapt_binary,
+    args = c(
+      "-e 0.2 --discard-untrimmed --minimum-length 30 --cores=8",
+      "-g", paste0("file:", PrimerF),
+      "-G", paste0("file:", PrimerR),
+      "-o", paste0(
+        "data/raw/demultiplexed_sequences/{name}/",
+        sample_names_raw[i],
+        "_trimmed_R1.fastq"
+      ),
+      "-p", paste0(
+        "data/raw/demultiplexed_sequences/{name}/",
+        sample_names_raw[i],
+        "_trimmed_R2.fastq"
+      ),
+      paste0("data/raw/", reads_to_trim_F[i]),
+      paste0("data/raw/", reads_to_trim_R[i])
     )
-  }
-} else {
-  # Run cutadapt, first removing 3' primers, then run again removing 5' primers
-  cat("\nYour reads have potential read-through, so we will attempt to trim primers from 3' read ends before 5'")
-  for (i in seq_along(sample_names_raw)) {
-    system2(
-      cutadapt_binary,
-      args = c(
-        "-e 0.2 --cores=8 -O 6",
-        "-a", paste0("file:", PrimerR_RC),
-        "-A", paste0("file:", PrimerF_RC),
-        "-o", paste0(
-          "data/raw/fastq/",
-          sample_names_raw[i],
-          "_trimmed_R1.fastq"
-        ), "-p", paste0(
-          "data/raw/fastq/",
-          sample_names_raw[i],
-          "_trimmed_R2.fastq"
-        ),
-        paste0("data/raw/", reads_to_trim_F[i]),
-        paste0("data/raw/", reads_to_trim_R[i])
-      )
-    )
-    system2(
-      cutadapt_binary,
-      args = c(
-        "-e 0.2 --discard-untrimmed --minimum-length 30 --cores=8",
-        "-g", paste0("file:", PrimerF),
-        "-G", paste0("file:", PrimerR),
-        "-o", paste0(
-          "data/working/trimmed_sequences/{name}/",
-          sample_names_raw[i],
-          "_trimmed_R1.fastq"
-        ),
-        "-p", paste0(
-          "data/working/trimmed_sequences/{name}/",
-          sample_names_raw[i],
-          "_trimmed_R2.fastq"
-        ),
-        paste0("data/raw/fastq/", sample_names_raw[i], "_trimmed_R1.fastq"),
-        paste0("data/raw/fastq/", sample_names_raw[i], "_trimmed_R2.fastq")
-      )
-    )
-  }
-  file.remove(file.path("data/raw/fastq", list.files("data/raw/fastq")))
+  )
 }
+if (length(intersect(genes, RC_primers)) > 0) {
+  # Run cutadapt, removing gene-specific 3' primers
+  cat("\nYour reads have potential read-through, so we will attempt to trim primers from the 3' end")
+  for (i in seq_along(sample_names_raw)) {
+    for (gene in intersect(genes, RC_primers)) {
+      system2(
+        cutadapt_binary,
+        args = c(
+          "-e 0.2 --cores=8 --minimum-length 30 -O 10",
+          "-a", paste0("file:", gene_PrimerR_RC[[gene]]),
+          "-A", paste0("file:", gene_PrimerF_RC[[gene]]),
+          "-o", paste0(
+            "data/working/trimmed_sequences/",
+            gene,
+            "/",
+            sample_names_raw[i],
+            "_trimmed_R1.fastq"
+          ),
+          "-p", paste0(
+            "data/working/trimmed_sequences/",
+            gene,
+            "/",
+            sample_names_raw[i],
+            "_trimmed_R2.fastq"
+          ),
+          file.path(
+            "data/raw/demultiplexed_sequences",
+            gene,
+            paste0(sample_names_raw[i], "_trimmed_R1.fastq")
+          ),
+          file.path(
+            "data/raw/demultiplexed_sequences",
+            gene,
+            paste0(sample_names_raw[i], "_trimmed_R2.fastq")
+          )
+        )
+      )
+      file.remove(file.path(
+        "data/raw/demultiplexed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R1.fastq")
+      ))
+      file.remove(file.path(
+        "data/raw/demultiplexed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R2.fastq")
+      ))
+    }
+  } 
+} else {
+  for (gene in genes) {
+    file.copy(
+      from = file.path(
+        "data/raw/demultiplexed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R1.fastq")
+      ),
+      to = file.path(
+        "data/working/trimmed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R1.fastq")
+      ),
+      overwrite = TRUE
+    )
+    file.copy(
+      from = file.path(
+        "data/raw/demultiplexed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R2.fastq")
+      ),
+      to = file.path(
+        "data/working/trimmed_sequences",
+        gene,
+        paste0(sample_names_raw[i], "_trimmed_R2.fastq")
+      ),
+      overwrite = TRUE
+    )
+    file.remove(file.path(
+      "data/raw/demultiplexed_sequences",
+      gene,
+      paste0(sample_names_raw[i], "_trimmed_R1.fastq")
+    ))
+    file.remove(file.path(
+      "data/raw/demultiplexed_sequences",
+      gene,
+      paste0(sample_names_raw[i], "_trimmed_R2.fastq")
+    ))
+  }
+  cat("\nYour reads should not have potential read-through, so we only removed primers from the 5' end of each read")
+}
+
 
 # Cutadapt has an issue where it does not correctly compress large read files
 # so we have to do it here ourselves. Unfortunately, this takes some time.

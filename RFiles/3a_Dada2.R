@@ -10,6 +10,7 @@ library(digest)
 library(stringr)
 library(dplyr)
 library(tibble)
+library(ggplot2)
 library(seqinr)
 library(ShortRead)
 
@@ -227,6 +228,8 @@ save.image(file = "data/working/3_qual.RData")
 # We will next use the DADA2 command filterandTrim to remove poor quality reads
 # and truncate the 3' end of reads to reduce error inclusion.
 
+# First, get your gene list, it's easier to copy and paste the name
+genes
 # Enter your genes and truncation value for each gene. Follow the pattern shown
 # (gene1, R1_truncation_length_gene1, R2_truncation_length_gene1, gene2 etc).
 # Make sure to include quotation marks around gene names, but DO NOT put
@@ -314,7 +317,7 @@ for (gene in genes) {
 # very low quality reads. However, increasing maxEE does increase computational
 # time.
 for (gene in genes) {
-  dada2::dfilterAndTrim(
+  dada2::filterAndTrim(
     actual_trimmed_reads[[gene]]$F,
     filtered_reads[[gene]]$F,
     actual_trimmed_reads[[gene]]$R,

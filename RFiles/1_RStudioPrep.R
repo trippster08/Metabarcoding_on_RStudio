@@ -62,6 +62,7 @@ project_name
 # Create all the subdirectories we will use
 # Define the directory names
 new_dir <- c(
+  "data/raw",
   "data/working/trimmed_sequences",
   "data/results",
   "ref",

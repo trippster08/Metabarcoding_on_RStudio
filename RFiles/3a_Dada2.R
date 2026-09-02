@@ -220,9 +220,18 @@ for (gene in genes) {
       height = 9
     )
   }
+  # Save all R objects created to this point
+  save.image(file = file.path(
+    paste0(
+      path_to_working,
+      "3_qual_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 
-save.image(file = "data/working/3_qual.RData")
+
 
 ## Trim And Filter Reads =======================================================
 # We will next use the DADA2 command filterandTrim to remove poor quality reads
@@ -410,10 +419,17 @@ for (gene in genes) {
   )
   cat("\nHere are the samples removed after filtering for", gene, "\n")
   print(removed)
+  # Save all the objects created to this point in this section
+  save.image(file = file.path(
+    paste0(path_to_working,
+      "4_filter_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 
-# Save all the objects created to this point in this section
-save.image(file = "data/working/4_filter.RData")
+
 
 ## Estimate Error Rates ========================================================
 
@@ -482,10 +498,17 @@ for (gene in genes) {
       height = 9
     )
   }
+  # Save all the objects created to this point in this section
+  save.image(file = file.path(
+    paste0(path_to_working,
+      "5_error_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 
-# Save all the objects created to this point in this section
-save.image(file = "data/working/5_error.RData")
+
 
 ## Denoise =====================================================================
 # This applies the "core sample inference algorithm" (i.e. denoising) in dada2
@@ -512,10 +535,17 @@ for (gene in genes) {
     )
   }
   cat("\nDenoising is complete for", gene, "\n")
+  # Save all the objects created to this point in this section
+  save.image(file = file.path(
+    paste0(path_to_working,
+      "6_denoise_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 
-# Save all the objects created to this point in this section
-save.image(file = "data/working/6_denoise.RData")
+
 
 ## Merge Paired Sequences ======================================================
 
@@ -547,9 +577,16 @@ for (gene in genes) {
     verbose = TRUE
   )
   cat("\nMerging is complete for", gene)
+  save.image(file = file.path(
+    paste0(path_to_working,
+      "7_merge_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 # Save all the objects created to this point in this section
-save.image(file = "data/working/7_merge.RData")
+
 
 ## Create Sequence-Table =======================================================
 
@@ -657,10 +694,17 @@ for (gene in genes) {
       )
     )
   )
+  # Save all the objects created to this point in this section
+  save.image(file = file.path(
+    paste0(path_to_working,
+      "8_chimera_",
+      gene,
+      ".RData"
+    )
+  ))
 }
 
-# Save all the objects created to this point in this section
-save.image(file = "data/working/8_chimera.RData")
+
 
 ## Examine Sequence Lengths ====================================================
 
@@ -1027,5 +1071,13 @@ for (gene in genes) {
       )
     )
   )
+
+  save.image(file = file.path(
+    path_to_working,
+    paste0(
+      "9_output_",
+      gene,
+      ".RData"
+    )
+  ))
 }
-save.image(file = "data/working/9_output.RData")

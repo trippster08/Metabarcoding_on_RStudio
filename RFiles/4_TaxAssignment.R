@@ -373,5 +373,5 @@ write.table(
 )
 
 
-# Save all objects to this point.
-save.image(file = "data/working/4_Assign_Taxonomy.RData")
+# Save all objects to this point, do this for each gene.
+save.image(file = "data/working/4_Assign_Taxonomy_GENE.RData")

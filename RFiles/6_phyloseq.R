@@ -12,7 +12,9 @@
 library(dada2)
 library(digest)
 library(phyloseq)
-library(tidyverse)
+library(dplyr)
+library(tibble)
+library(readr)
 library(seqinr)
 library(ape)
 library(DECIPHER)
@@ -27,52 +29,61 @@ library(phangorn)
 # substitute your own path for the one below.
 setwd("/Users/smithb/Dropbox (Smithsonian)/Projects_Metabarcoding/PROJECTNAME")
 
+# We run this on a gene-specific basis, so you will do this for each gene you
+# wish to analyze.
+## GENE 1
 ## Prepare Components to be Imported Into Phyloseq =============================
 
+# Load your R objects from the DADA2 analysis.
+load("data/working/9_output_GENE.RData")
+# Load your taxonomy results
+load("data/working/4_Assign_Taxonomy_GENE.RData")
 ### sequence-table -------------------------------------------------------------
-# Add md5 hash to the sequence-table from the DADA2 analysis. You may already
-# have this
-seqtab_nochim_md5 <- as.matrix(seqtab_nochim)
-colnames(seqtab_nochim_md5) <- repseq_project1_md5
-View(seqtab_nochim_md5)
-# Make phyloseq otu_table from the sequence-table (columns of ASV/OTUs, rows of
-# samples). If you want to use a feature-table (columns of samples, rows of
-# ASV/OTUs) instead, use "taxa_are_rows = TRUE"
-OTU_md5 <- phyloseq::otu_table(seqtab_nochim_md5, taxa_are_rows = FALSE) 
+
+
+# Make phyloseq otu_table from the sequence-table (columns of ASV md5 hashes,
+# rows of samples). If you want to use a feature-table (columns of samples,
+# rows of ASV/OTUs) instead, use "taxa_are_rows = TRUE"
+OTU_md5 <- phyloseq::otu_table(seqtab_nochim_md5, taxa_are_rows = FALSE)
 
 ### tax_table ------------------------------------------------------------------
-# Row headings for the tax_table should match the column headings in the
-# otu_table (which in this case are md5 hashes of the ASV's). Also, our current
-# "taxonomy" has a taxonomy table and a bootstrap table, but for the tax_table
-# we need need a taxonomy-only table.
+# Our current dada2 taxonomy table has a taxonomy table and a bootstrap table.
+# Phyloseq only needs the taxonomy portion. Also, this table has ASVs, while
+# we would prefer md5 hashes. We'll do a left join to replace ASVs with md5
+# hashes. We will also convert to a tibble for easier manipulation.
 
 # Make a new taxonomy-only table, and replace the current rownames (ASVs) with
 # md5 hashes.
-taxonomy_tax_md5 <- taxonomy$tax
-row.names(taxonomy_tax_md5) <- repseq_md5
-View(taxonomy_tax_md5)
+taxonomy_tax_md5 <- tibble::as_tibble(taxonomy$tax, rownames = "ASV") %>%
+  dplyr::left_join(
+    tibble::as_tibble(repseq_nochim_md5_asv),
+    by = "ASV"
+  ) %>%
+  dplyr::relocate(md5, .before = 1) %>%
+  tibble::column_to_rownames("md5")
 
-# Make phyloseq tax-table from our taxonomy-only table.
-TAX_md5 <- phyloseq::tax_table(taxonomy_tax_md5)
+# Make phyloseq tax-table from our taxonomy-only table. Phyloseq requires this
+# in matrix format, so we'll convert.
+TAX_md5 <- phyloseq::tax_table(as.matrix(taxonomy_tax_md5))
 
 ### sample_data ----------------------------------------------------------------
 # Import metadata (here as a tab-delimited text file, see examples for
-# formatting) and convert to a sample_data object. Make sure that your .tsv file
-#  has the same samples (and sample names) as your other your otu_table. This
-# may not be the same as your original input samples, since some samples may
-# have ended up with zero reads and been removed.
-
-# Check sample names that have been used to this point. I usally do it by
-# looking at "seqtab.nochim", since this is where the phyloseq otu_table gets
-# its sample names from. Rename sample names in your metadata file you hope
-# to import to match those in "seqtab.nochim".
-rownames(seqtab_nochim)
+# formatting) and convert to a sample_data object.
 
 # Import your metadata file. I usually use a tab-delimited file (sep = "\t"),
-# but you can also use a comma delimited metadata file (sep = ","). You need to
-# use your sample names (that should now be matching those in "seqtab.nochim")
-# as rownames in the imported table. In this case, the column "sample_name" in
-# my metadata.tsv file has samples names, so "row.names = 'sample_name'".
+# but you can also use a comma delimited metadata file (sep = ","). Your sample
+# names need to match the sample names in the sequencing run. You may need
+# to define some columns whose type may be incorrectly determined (some
+# columns may contain only numbers and be recognized as a numeric column,
+# but the values are actually discreet, and should be characters instead)
+meta <- readr::read_tsv(
+  "metadata.tsv",
+  col_types = cols(
+    replicate = col_character(),
+    depth = col_character()
+  ),
+  show_col_types = TRUE
+)
 
 # Also, you may have some variables that are numbers but you want to keep as
 # characters. They contain discreet variables, but because they are numbers,
@@ -91,15 +102,19 @@ metadata <- phyloseq::sample_data(read.delim(
   row.names = "sample_name"
 ))
 
-# Look at the metadata file, make sure everything looks okay. You'll notice that
-# any dashes in your column names will be converted into periods (e.g.
-# "filter-size" would be now "filter.size"), but underscores are not changed.
-View(metadata)
+# Make sure that the metadata has the same samples (and only the
+# samples, no extras) as the sequence table. We will do a right
+# join with sample_names_filtered (which contains the names of the samples
+# that have made it through the pipeline) to make sure these are the same.
+meta_filtered <- meta %>%
+  filter(., SeqID %in% sample_names_filtered) %>%
+  tibble::column_to_rownames("SeqID")
+
 
 # Look at data type of all the columns of the table.
 str(metadata)
 # Make a phyloseq sample_data file from "metadata"
-SAMPLE <- phyloseq::sample_data(metadata)
+SAMPLE <- phyloseq::sample_data(meta_filtered)
 
 
 ### refseq ---------------------------------------------------------------------
@@ -268,8 +283,8 @@ phyloseq::taxa_names(physeq)[1:20]
 phyloseq::plot_tree(
   physeq,
   ladderize = "left",
-  color = "filter_size",
-  shape = "tank",
+  color = "factor1",
+  shape = "factor2",
   size = "abundance",
   base.spacing = 0.03,
   min.abundance = 2,
@@ -278,7 +293,7 @@ phyloseq::plot_tree(
 
 
 
-phyloseq::plot_richness(physeq, x="filter_size", measures=c("Shannon", "Fisher"), color = "filter_size") 
+phyloseq::plot_richness(physeq, x="factor1", measures=c("Shannon", "Fisher"), color = "factor2") 
 ord.euclidean <- phyloseq::ordinate(physeq, "MDS", "euclidean")
-phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "tank")
-phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "filter_size")
+phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "factor1")
+phyloseq::plot_ordination(physeq, ord.euclidean, type = "samples", color = "factor2")

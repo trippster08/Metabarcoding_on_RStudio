@@ -74,11 +74,11 @@ read_count_asv_count_plot
 # We can also rarefy the data to get the expected number of ASVs for each
 # sample if they had the same number of reads as the smallest sample.
 # Firest, we need to determine which sample has the least number of reads.
-raremin <- min(rowSums(seqtab_nochim_md5))
+min_reads <- min(rowSums(seqtab_nochim_md5))
 # Then we can use this value and the vegan command rarefy to calculate the
 # expected number of ASVs for each sample if all had the same number of reads
 # as the smallest sample.
-asv_count_rarefied <- tibble::enframe(vegan::rarefy(seqtab_nochim_md5, raremin)) %>%
+asv_count_rarefied <- tibble::enframe(vegan::rarefy(seqtab_nochim_md5, min_reads)) %>%
   rename(
     Sample_ID = name,
     expected_ASVs = value
@@ -345,11 +345,11 @@ rarecurve_df_meta_plot <- ggplot2::ggplot(rarecurve_df_meta) +
     linewidth = 0.75
   ) +
   scale_linetype_manual(values = c("solid", "dashed", "dotted", "dotdash")) +
-  scale_x_continuous(limits = c(0, raremin))
+  scale_x_continuous(limits = c(0, min_reads))
 rarecurve_df_meta_plot
 
 ## Non-Metric Multidimensional Scaling =========================================
-# Now lets move to some ways to look at how similar your samples are usingj
+# Now lets move to some ways to look at how similar your samples are using
 # ordination techniques.
 # We are going to use NMDS (Non-Metric Multidimensional Scaling).
 # First we need to run a NMDS analysis on our sequence-table.
